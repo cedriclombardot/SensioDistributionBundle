@@ -23,36 +23,51 @@ class ScriptHandler
     public static function buildBootstrap($event)
     {
         $options = self::getOptions($event);
-        $appDir = $options['symfony-app-dir'];
+        $appsDir = $options['symfony-app-dir'];
 
-        if (!is_dir($appDir)) {
-            echo 'The symfony-app-dir ('.$appDir.') specified in composer.json was not found in '.getcwd().', can not build bootstrap file.'.PHP_EOL;
-
-            return;
+        if (!is_array($appsDir)) {
+            $appsDir = array($appsDir);
         }
 
-        static::executeBuildBootstrap($appDir, $options['process-timeout']);
+        foreach ($appsDir as $appDir) {
+	        if (!is_dir($appDir)) {
+	            echo 'The symfony-app-dir ('.$appDir.') specified in composer.json was not found in '.getcwd().', can not build bootstrap file.'.PHP_EOL;
+	            return;
+	        }
+
+	        static::executeBuildBootstrap($appDir, $options['process-timeout']);
+        }
+
     }
 
     public static function clearCache($event)
     {
         $options = self::getOptions($event);
-        $appDir = $options['symfony-app-dir'];
+        $appsDir = $options['symfony-app-dir'];
 
-        if (!is_dir($appDir)) {
-            echo 'The symfony-app-dir ('.$appDir.') specified in composer.json was not found in '.getcwd().', can not clear the cache.'.PHP_EOL;
-
-            return;
+        if (!is_array($appsDir)) {
+            $appsDir = array($appsDir);
         }
 
-        static::executeCommand($event, $appDir, 'cache:clear --no-warmup', $options['process-timeout']);
+        foreach ($appsDir as $appDir) {
+	        if (!is_dir($appDir)) {
+	            echo 'The symfony-app-dir ('.$appDir.') specified in composer.json was not found in '.getcwd().', can not clear the cache.'.PHP_EOL;
+	            return;
+	        }
+
+	        static::executeCommand($event, $appDir, 'cache:clear --no-warmup', $options['process-timeout']);
+        }
     }
 
     public static function installAssets($event)
     {
         $options = self::getOptions($event);
-        $appDir = $options['symfony-app-dir'];
+        $appsDir = $options['symfony-app-dir'];
         $webDir = $options['symfony-web-dir'];
+
+        if (!is_array($appsDir)) {
+            $appsDir = array($appsDir);
+        }
 
         $symlink = '';
         if ($options['symfony-assets-install'] == 'symlink') {
@@ -67,7 +82,9 @@ class ScriptHandler
             return;
         }
 
-        static::executeCommand($event, $appDir, 'assets:install '.$symlink.escapeshellarg($webDir));
+        foreach ($appsDir as $appDir) {
+            static::executeCommand($event, $appDir, 'assets:install '.$symlink.escapeshellarg($webDir));
+        }
     }
 
     public static function installRequirementsFile($event)
@@ -154,9 +171,9 @@ namespace { return \$loader; }
     protected static function getOptions($event)
     {
         $options = array_merge(array(
-            'symfony-app-dir' => 'app',
+            'symfony-app-dir' => array('frontend', 'backend'),
             'symfony-web-dir' => 'web',
-            'symfony-assets-install' => 'hard'
+            'symfony-assets-install' => 'symlink'
         ), $event->getComposer()->getPackage()->getExtra());
 
         $options['symfony-assets-install'] = getenv('SYMFONY_ASSETS_INSTALL') ?: $options['symfony-assets-install'];
